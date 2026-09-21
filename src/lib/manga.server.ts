@@ -321,7 +321,8 @@ const PROMPT_SYSTEM =
   "and dust or debris reacting where appropriate rather than two characters standing near each other.\n" +
   "- COMPLETE MANHWA STORYTELLING: compose every image like a finished vertical Korean webtoon episode panel, with " +
   "confident cinematic crops, expressive acting, purposeful negative space for lettering, strong depth, and clean visual flow. " +
-  "Use wide establishing compositions, intimate close-ups, tall reveals, border-breaking action and quiet breathing space as the story requires.\n" +
+  "Use wide establishing compositions, intimate close-ups, extreme detail crops, tall reveals, offset subjects, foreground occlusion, " +
+  "border-breaking action and quiet breathing space as the story requires. Never default to a centred waist-up character.\n" +
   "- WEBTOON EFFECTS: select only effects that strengthen this exact beat. Action may use speed lines, impact bursts, " +
   "directional streaks, motion blur, debris, dust, shockwaves, exaggerated motion, energy or slash trails and impact " +
   "distortion. Emotion may use subtle background rays, tension lines, dramatic shadow, eye emphasis, atmospheric particles " +
@@ -332,7 +333,9 @@ const PROMPT_SYSTEM =
   "Use wide shots for geography and large-scale action, medium shots for interaction, close-ups for facial emotion, extreme " +
   "close-ups for intense reactions, low angles for power, high angles for vulnerability or scale, over-the-shoulder shots " +
   "for conversations, dramatic perspective and foreshortening for attacks, and Dutch angles for instability or tension. " +
-  "The camera must serve the story beat while the established location remains recognisable.\n" +
+  "The camera must serve the story beat while the established location remains recognisable. Treat neighbouring timestamps as a visual sequence: " +
+  "alternate wide, medium, close and extreme-detail views; alternate left, centre and right subject placement; change camera height and foreground layer. " +
+  "Two consecutive prompts must not use the same shot size, angle, crop or subject placement unless the script explicitly holds on an unchanged view.\n" +
   "- SETTINGS ARE FAITHFUL AND REPEATED (critical): describe each place exactly as the script has it, plainly and " +
   "simply, with no invented spectacle. Add only fantasy or magical features the script itself establishes. The FIRST " +
   "time a place appears, fix 4-6 concrete physical facts about it (wall and floor material and colour, one or two " +
