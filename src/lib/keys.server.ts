@@ -12,7 +12,7 @@
  */
 
 /** Requests allowed per rolling minute (provider limit, kept just under 20). */
-export const IMAGE_RPM = 18;
+export const IMAGE_RPM = 19;
 /** Rolling window length. */
 const WINDOW_MS = 60_000;
 /**
@@ -20,13 +20,13 @@ const WINDOW_MS = 60_000;
  * 18/minute window below is the real budget, so several renders may run side by
  * side instead of the queue trickling one image every three seconds.
  */
-const SPACING_MS = 700;
+const SPACING_MS = 200;
 
 /**
  * How many renders may be in flight at once. A render takes ~10s, so four
  * lanes keep the minute budget busy without ever exceeding it.
  */
-export const PER_KEY_CONCURRENCY = 4;
+export const PER_KEY_CONCURRENCY = 8;
 
 
 export function agnesKey(): string {
@@ -61,17 +61,22 @@ function spacing(): number {
 
 /** Record a rate-limit response so every lane slows down. */
 export function noteRateLimit(retryAfterMs?: number): number {
-  throttleLevel = Math.min(throttleLevel + 1, 5);
+  throttleLevel = Math.min(throttleLevel + 1, 4);
   const backoff = retryAfterMs && retryAfterMs > 0
-    ? Math.min(retryAfterMs, 120_000)
-    : Math.min(5_000 * 2 ** (throttleLevel - 1), 60_000);
+    ? Math.min(retryAfterMs, 60_000)
+    : Math.min(2_000 * 2 ** (throttleLevel - 1), 30_000);
   cooldownUntil = Math.max(cooldownUntil, Date.now() + backoff);
   return backoff;
 }
 
-/** Record a success so the throttle relaxes again. */
+/**
+ * Record a success so the throttle relaxes again. One good render clears the
+ * slowdown completely: keeping a widened spacing after the provider is healthy
+ * again was what made long runs crawl.
+ */
 export function noteImageSuccess(): void {
-  if (throttleLevel > 0) throttleLevel--;
+  throttleLevel = 0;
+  cooldownUntil = 0;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
