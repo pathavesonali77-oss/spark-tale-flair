@@ -2319,11 +2319,12 @@ export async function generateImage(
     });
     if (url) return url;
     if (throttled) {
+      // A published server call has a finite lifetime and may be running in an
+      // isolate that cannot share this module's limiter with sibling calls.
+      // Return capacity pressure to the browser immediately; its durable queue
+      // will retry without consuming the panel's render-attempt budget.
       rateLimited++;
-      // withImageKey already holds the shared cooldown; a short breather keeps
-      // the lanes from re-entering it all at the same instant.
-      await pause(250 + rateLimited * 250);
-      continue;
+      throw new Error(lastErr || "429 rate limited");
     }
     attempt++;
     // Short breather only: long back-offs made panels look stuck.
@@ -2475,6 +2476,7 @@ export async function renderPanel(
     } catch (e) {
       if (e instanceof KilledError) throw e;
       const msg = e instanceof Error ? e.message : String(e);
+      if (/429|rate limited|1015|too many requests|quota/i.test(msg)) throw e;
       errors.push(`round ${round + 1}: ${msg}`);
       if (contentRefusal(msg)) refused = true;
     }

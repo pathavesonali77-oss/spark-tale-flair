@@ -17,3 +17,4 @@
 - [x] Allow the provider's agnes-ai.space output host through the image proxy
 - [x] Handle Cloudflare 1015 responses returned as HTTP 403 and serialize free-tier image requests
 - [x] Make every single- and multi-frame image use varied, creative webtoon compositions
+- [x] Prevent live generation from stalling by pacing image starts across server isolates and retrying provider limits without exhausting panel attempts

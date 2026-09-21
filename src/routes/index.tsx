@@ -117,11 +117,13 @@ const PROMPT_RANGE = 15;
  * (src/lib/keys.server.ts), so a few client lanes simply keep the queue fed
  * without ever racing past the limit.
  */
-// Four browser lanes, two panels per request: the server still owns the
-// account-wide per-minute budget, so this only keeps that budget saturated
-// instead of drawing one picture at a time.
-const IMAGE_CONCURRENCY = 6;
-const IMAGE_BATCH = 2;
+// Production can run each server call in a different isolated worker, so its
+// in-memory limiter cannot coordinate browser lanes. Start one panel every
+// 3.25s here as the account-wide source of truth (18.46/min, below Agnes' 20).
+// Four lanes still overlap the slow upstream renders without sending a burst.
+const IMAGE_CONCURRENCY = 4;
+const IMAGE_BATCH = 1;
+const IMAGE_START_SPACING_MS = 3_250;
 
 /**
  * The server already downloads and validates every finished image (complete
@@ -860,6 +862,17 @@ function Index() {
 
       // Adaptive throttle: back off globally when the provider rate-limits.
       let cooldownUntil = 0;
+      let nextImageStart = 0;
+      let imageStartLock = Promise.resolve();
+      const reserveImageStart = async () => {
+        const turn = imageStartLock.then(async () => {
+          const wait = Math.max(cooldownUntil, nextImageStart) - Date.now();
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          nextImageStart = Date.now() + IMAGE_START_SPACING_MS;
+        });
+        imageStartLock = turn.catch(() => undefined);
+        await turn;
+      };
       // Jobs currently in flight. A worker must NOT exit while another worker
       // is still rendering, because that worker can push a failed panel back
       // onto the queue — with everyone already gone, the automatic retry
@@ -900,9 +913,13 @@ function Index() {
            * after MAX_IMAGE_ATTEMPTS tries is the panel marked failed.
            */
           const requeue = (g: Job, msg: string) => {
-            if (/429|rate|quota/i.test(msg)) cooldownUntil = Date.now() + 5000;
-            if (g.attempts + 1 < MAX_IMAGE_ATTEMPTS && !cancelRef.current) {
-              queue.push({ ...g, attempts: g.attempts + 1 });
+            const limited = /429|rate|quota|1015|too many/i.test(msg);
+            if (limited) cooldownUntil = Math.max(cooldownUntil, Date.now() + 5000);
+            const nextAttempts = limited ? g.attempts : g.attempts + 1;
+            if (nextAttempts < MAX_IMAGE_ATTEMPTS && !cancelRef.current) {
+              // Provider capacity is not a bad panel attempt. Keep it queued
+              // indefinitely and spend attempts only on actual render errors.
+              queue.push({ ...g, attempts: nextAttempts });
               record(g.seg.index, { status: "waiting", error: undefined });
             } else {
               record(g.seg.index, { status: "error", prompt: g.prompt, error: msg });
@@ -913,6 +930,7 @@ function Index() {
             `[client] worker ${me} drawing panels ${group.map((g) => g.seg.index + 1).join(",")} · queue=${queue.length}`,
           );
           try {
+            await reserveImageStart();
             const { results } = await killable((signal) =>
               drawBatch({
                 data: {
