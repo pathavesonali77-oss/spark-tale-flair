@@ -120,7 +120,7 @@ const PROMPT_RANGE = 15;
 // Four browser lanes, two panels per request: the server still owns the
 // account-wide per-minute budget, so this only keeps that budget saturated
 // instead of drawing one picture at a time.
-const IMAGE_CONCURRENCY = 4;
+const IMAGE_CONCURRENCY = 6;
 const IMAGE_BATCH = 2;
 
 /**
