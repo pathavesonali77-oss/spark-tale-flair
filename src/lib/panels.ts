@@ -197,30 +197,56 @@ function hash(text: string): number {
 
 /**
  * Dynamic manhwa page layouts — never a plain equal grid. Each option is a real
- * published-webtoon composition: tilted frames, uneven weights, one dominant
- * frame, frames that bleed off the page edge and art that breaks a border.
+ * published-webtoon composition: floating crops, offset frames, dramatic white
+ * pacing, uneven weights, one dominant frame, and art that breaks a border.
  */
+const SINGLE_FRAME_COMPOSITIONS = [
+  "a deliberately off-centre cinematic composition with the subject anchored in one third, a strong foreground occluder creating depth, and meaningful open background space balancing the action",
+  "an intimate cropped composition that isolates the story's most expressive detail while environmental edges and directional light still identify the location",
+  "a bold low-angle composition with exaggerated foreground scale, converging background perspective and the subject breaking the implied picture edge",
+  "a tense high-angle composition with the subject small and displaced from centre, architecture or terrain forming graphic leading lines around them",
+  "a layered over-the-shoulder composition with a large soft foreground silhouette, the decisive interaction in the middle distance and clear location detail behind it",
+  "a dynamic Dutch-angle composition with a sweeping diagonal action path, asymmetric negative space and foreground elements cropped by the picture edge",
+  "a quiet wide composition using generous breathing room, a small expressive figure and environmental storytelling arranged in a strong asymmetrical balance",
+  "an extreme close-up crop selected from the exact emotional or physical detail that carries this beat, with bold partial forms entering from two image edges",
+  "a deep three-plane composition with a sharply cropped foreground prop, the active subject crossing the middle plane and a distant landmark completing the visual path",
+  "a centered iconic reveal framed by surrounding architecture, cloth, foliage or energy as a natural vignette, with dramatic scale contrast and clean silhouette",
+];
+
 const LAYOUTS: Record<number, string[]> = {
   2: [
     "exactly 2 unequal cinematic horizontal frames: a shallow letterbox establishing strip above one huge dominant action frame, separated by a thick white diagonal gutter with crisp black edge lines; the lower action and energy break beyond its border into the gutter",
     "exactly 2 unequal frames divided by one steep white diagonal gutter: a compact upper reaction frame and a dominant lower impact frame occupying most of the canvas, with foreground debris and energy crossing the lower border",
     "exactly 2 frames: one large full-width action frame with a narrow tilted close-up strip cutting across its top edge, thick clean white gutter, strong top-to-bottom reading flow and a border-breaking subject",
+    "exactly 2 separated floating frames on a clean white webtoon page: a smaller upper-right detail crop followed after generous vertical breathing room by a much larger lower-left emotional close-up; offset edges, different widths and no rigid alignment",
+    "exactly 2 radically different views: a dominant near-square interaction frame pushed to the upper-left and a narrow panoramic reaction frame low on the page, linked by gaze direction across a broad white pause",
+    "exactly 2 frames with a tall narrow reveal intruding beside a wide low action panel; one border is broken by hair, cloth, weapon or energy, while the clean white gutter creates a dramatic reading beat",
   ],
   3: [
     "exactly 3 unequal horizontal webtoon frames stacked vertically: a shallow wide establishing strip, a larger full-width power-up frame, then a huge tilted climax frame occupying nearly half the canvas; bold black frame edges, thick white diagonal gutters, effects breaking across the final border",
     "exactly 3 staggered horizontal bands of clearly different heights: narrow reaction, broad action, dominant impact; each boundary slants in a different direction, leaving clean white gutters while speed lines and debris bridge the action panels",
     "exactly 3 frames with a slim panoramic top strip, a medium diagonal middle strip and an oversized bottom splash frame; maintain an effortless vertical reading path, deep cinematic crops and one subject breaking the final frame edge",
+    "exactly 3 floating panels with generous white vertical spacing: a small off-centre detail crop, a broad conversational frame, then an oversized extreme close-up shifted toward the opposite edge; every panel has a different width and crop",
+    "exactly 3 asymmetrical frames built around one borderless central character reveal: a narrow environmental strip above and a tilted reaction inset below, with the central figure extending into the white gutter without becoming a collage",
+    "exactly 3 panels in a zigzag reading rhythm: compact upper-left reaction, long diagonal middle action panel and large lower-right consequence frame, with strong directional gaze and motion connecting them",
   ],
   4: [
     "exactly 4 unequal frames in a vertical action rhythm: a thin panoramic setup strip, two compact angled progression frames, then one enormous bottom climax frame; thick white gutters, black edge lines, diagonal cuts and effects crossing only into the gutters",
     "exactly 4 staggered cinematic bands wrapped around one dominant diagonal action frame, with three smaller reaction and detail strips; strong vertical reading order, broad white gutters and a border-breaking focal figure",
     "exactly 4 asymmetric frames of dramatically unequal scale: two narrow setup strips, one medium escalation frame and one huge impact splash; steep diagonal white gutters, bold black edges, flying debris and energy extending beyond the climax border",
+    "exactly 4 floating webtoon frames paced with broad white gaps: tiny detail, medium reaction, narrow movement strip and enormous emotional payoff; offset left-right alignment and no repeated frame dimensions",
+    "exactly 4 frames orbiting one dominant borderless action figure: two slim close-up fragments above, one tilted environmental frame behind and one wide consequence panel below, with a clear top-to-bottom path",
+    "exactly 4 irregular panels using alternating tall and wide crops: a vertical reveal, a tiny eye or hand detail, a sweeping diagonal action panel and a broad quiet aftermath frame, each separated by clean white space",
   ],
 };
 
 function layoutOf(frames: number, key: string): string {
   const options = LAYOUTS[Math.min(4, Math.max(2, frames))] ?? LAYOUTS[2]!;
   return options[hash(key) % options.length]!;
+}
+
+function singleComposition(key: string): string {
+  return SINGLE_FRAME_COMPOSITIONS[hash(key) % SINGLE_FRAME_COMPOSITIONS.length]!;
 }
 
 function balloonFor(b: Bubble, where: string): string {
@@ -248,7 +274,6 @@ function storyBoxFor(text: string, where: string): string {
 export function panelDirective(plan: PanelPlan): string {
   const spoken = plan.bubbles.filter((b) => b.text.length > 0);
   const narrated = plan.narration.filter((text) => text.length > 0);
-  if (plan.frames <= 1 && spoken.length === 0 && narrated.length === 0) return "";
 
   const out: string[] = [];
 
@@ -263,6 +288,11 @@ export function panelDirective(plan: PanelPlan): string {
     plan.beats.forEach((beat, i) => {
       out.push(`the ${ORDINAL[i] ?? `frame ${i + 1}`} frame shows ${beat.replace(/\.$/, "")}`);
     });
+  } else {
+    out.push(
+      `compose this single webtoon image as ${singleComposition(plan.body)}; choose the crop, camera height and perspective ` +
+        `for this exact story beat rather than defaulting to a centred medium shot; preserve all story-essential people, action and location clues`,
+    );
   }
 
   plan.bubbles.forEach((b, i) => {
