@@ -56,15 +56,23 @@ let throttleLevel = 0;
 
 /** Current minimum gap between two request starts. */
 function spacing(): number {
-  return SPACING_MS * (1 + throttleLevel);
+  return SPACING_MS * (1 + Math.min(throttleLevel, 1));
 }
 
-/** Record a rate-limit response so every lane slows down. */
+/**
+ * Record a rate-limit response.
+ *
+ * A 429 here only means "the rolling minute is already full", not that the
+ * account is in trouble: the free tier refills continuously. So the pause is
+ * short and flat (never an exponential minute-long freeze), which is what used
+ * to leave the whole page waiting while the provider was ready again.
+ */
 export function noteRateLimit(retryAfterMs?: number): number {
-  throttleLevel = Math.min(throttleLevel + 1, 4);
-  const backoff = retryAfterMs && retryAfterMs > 0
-    ? Math.min(retryAfterMs, 60_000)
-    : Math.min(2_000 * 2 ** (throttleLevel - 1), 30_000);
+  throttleLevel = Math.min(throttleLevel + 1, 3);
+  const backoff =
+    retryAfterMs && retryAfterMs > 0
+      ? Math.min(Math.max(retryAfterMs, 2_000), 20_000)
+      : Math.min(3_000 + 2_000 * (throttleLevel - 1), 12_000);
   cooldownUntil = Math.max(cooldownUntil, Date.now() + backoff);
   return backoff;
 }
